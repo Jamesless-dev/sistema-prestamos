@@ -10,25 +10,37 @@ use Illuminate\Support\Facades\DB;
 
 class GestionPrestamos extends Component
 {
+
     public $equipo_id = '';
     public $estudiante_id = '';
     public $observaciones = '';
     
+
     public $mensajeExito = '';
     public $mensajeError = '';
     public $equiposDisponibles;
     public $estudiantes;
+    public $prestamosActivos; 
 
     public function mount()
     {
         $this->cargarDatos();
+        $this->cargarPrestamosActivos();
     }
 
     public function cargarDatos()
     {
         $this->equiposDisponibles = Equipo::where('estado', 'disponible')->get();
-        
         $this->estudiantes = User::where('role', 'estudiante')->get();
+    }
+
+    public function cargarPrestamosActivos()
+    {
+ 
+        $this->prestamosActivos = Prestamo::with(['equipo', 'estudiante'])
+            ->whereNull('fecha_devolucion')
+            ->orderBy('fecha_prestamo', 'desc')
+            ->get();
     }
 
     public function registrarPrestamo()
@@ -37,9 +49,6 @@ class GestionPrestamos extends Component
             'equipo_id' => 'required|exists:equipos,id',
             'estudiante_id' => 'required|exists:users,id',
             'observaciones' => 'nullable|string|max:255',
-        ], [
-            'equipo_id.required' => 'Debes seleccionar un equipo.',
-            'estudiante_id.required' => 'Debes seleccionar un estudiante.',
         ]);
 
         try {
@@ -49,24 +58,45 @@ class GestionPrestamos extends Component
                 'equipo_id' => $this->equipo_id,
                 'estudiante_id' => $this->estudiante_id,
                 'observaciones' => $this->observaciones,
-
             ]);
 
-            $equipo = Equipo::find($this->equipo_id);
-            $equipo->update(['estado' => 'prestado']);
+            Equipo::find($this->equipo_id)->update(['estado' => 'prestado']);
 
             DB::commit();
-
             $this->reset(['equipo_id', 'estudiante_id', 'observaciones', 'mensajeError']);
             $this->mensajeExito = '¡Préstamo registrado exitosamente!';
             
             $this->cargarDatos();
+            $this->cargarPrestamosActivos();
 
         } catch (\Exception $e) {
-      
             DB::rollBack();
             $this->mensajeError = 'Ocurrió un error al registrar el préstamo. Inténtalo de nuevo.';
+        }
+    }
 
+
+    public function registrarDevolucion($prestamoId)
+    {
+        try {
+            DB::beginTransaction();
+
+            $prestamo = Prestamo::findOrFail($prestamoId);
+            $prestamo->fecha_devolucion = now();
+            $prestamo->save();
+
+            $prestamo->equipo->update(['estado' => 'disponible']);
+
+            DB::commit();
+            $this->mensajeExito = '¡Equipo devuelto y marcado como disponible!';
+            $this->mensajeError = '';
+            
+            $this->cargarDatos();
+            $this->cargarPrestamosActivos();
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->mensajeError = 'Ocurrió un error al registrar la devolución.';
         }
     }
 
