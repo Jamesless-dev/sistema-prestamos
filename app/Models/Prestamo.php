@@ -17,6 +17,11 @@ class Prestamo extends Model
         'observaciones',
     ];
 
+    protected $casts = [
+        'fecha_prestamo' => 'datetime',
+        'fecha_devolucion' => 'datetime',
+    ];
+
     public function equipo()
     {
         return $this->belongsTo(Equipo::class);
