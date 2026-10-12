@@ -117,4 +117,67 @@
             Al registrar el préstamo, el equipo cambiará automáticamente a "Prestado".
         </p>
     </div>
+
+
+    <div class="mt-10">
+        <h3 class="text-2xl font-bold text-gray-800 mb-4">Préstamos Activos (Pendientes de Devolución)</h3>
+        
+        @if($prestamosActivos->isEmpty())
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center text-gray-500">
+                <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+                <p>No hay equipos prestados en este momento. ¡Todo está en el laboratorio!</p>
+            </div>
+        @else
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-100 text-gray-700 uppercase text-xs font-semibold">
+                            <tr>
+                                <th class="px-6 py-4">Equipo</th>
+                                <th class="px-6 py-4">Estudiante</th>
+                                <th class="px-6 py-4">Fecha Préstamo</th>
+                                <th class="px-6 py-4">Observaciones</th>
+                                <th class="px-6 py-4 text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @foreach($prestamosActivos as $prestamo)
+                                <tr class="hover:bg-gray-50 transition duration-150">
+                                    <td class="px-6 py-4">
+                                        <span class="font-semibold text-gray-900">{{ $prestamo->equipo->codigo }}</span>
+                                        <br>
+                                        <span class="text-sm text-gray-600">{{ $prestamo->equipo->nombre }}</span>
+                                    </td>
+                                    <td class="px-6 py-4 text-gray-700">
+                                        {{ $prestamo->estudiante->name }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600">
+                                        {{ $prestamo->fecha_prestamo->format('d/m/Y H:i') }}
+                                    </td>
+                                    <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                                        {{ $prestamo->observaciones ?: 'Sin observaciones' }}
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <button 
+                                            wire:click="registrarDevolucion({{ $prestamo->id }})"
+                                            wire:confirm="¿Estás seguro de que el estudiante ha devuelto este equipo?"
+                                            class="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-4 rounded-lg shadow-sm hover:shadow transition duration-200 flex items-center mx-auto"
+                                        >
+                                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                            </svg>
+                                            Devolver
+                                        </button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
+    </div>
+    
 </div>
