@@ -13,7 +13,7 @@ Route::get('/', function () {
         return redirect()->route('dashboard.estudiante');
     }
 
-    return redirect()->route('login');
+    return view('welcome');
 })->name('home');
 
 Route::middleware(['auth', 'verified', 'role:encargado'])->group(function () {

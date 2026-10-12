@@ -16,11 +16,12 @@
     </head>
     <body class="font-sans text-gray-900 antialiased">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
-            <div>
-                <a href="/" wire:navigate>
-                    <x-application-logo class="w-20 h-20 fill-current text-gray-500" />
-                </a>
-            </div>
+            
+            <div class="flex justify-center mb-4">
+                <a href="{{ url('/') }}" title="Volver al inicio">
+                    <img src="{{ asset('imagenes/kibo2.png') }}"  alt="Logo Kibo"  class="w-24 h-24 rounded-full object-cover shadow-md transition transform hover:scale-105 border-2 border-blue-500">
+                 </a>
+</div>
 
             <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
                 {{ $slot }}
