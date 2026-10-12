@@ -12,12 +12,7 @@
                     <h3 class="text-lg font-semibold mb-4">Bienvenido, {{ auth()->user()->name }}</h3>
                     <p class="mb-6">Tu rol: <span class="font-bold text-green-600">{{ ucfirst(auth()->user()->role) }}</span></p>
                     
-                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <p class="text-yellow-800">
-                            Aquí irá la vista del punto 5 (consulta de equipos disponibles).
-                            Esta sección será desarrollada por otro miembro del equipo.
-                        </p>
-                    </div>
+                    @livewire('consulta-equipos')
                 </div>
             </div>
         </div>
