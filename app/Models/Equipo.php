@@ -9,6 +9,12 @@ class Equipo extends Model
 {
     use HasFactory;
 
+    public const DISPONIBLE = 'disponible';
+
+    public const PRESTADO = 'prestado';
+
+    public const ESTADOS = [self::DISPONIBLE, self::PRESTADO];
+
     protected $fillable = [
         'codigo',
         'nombre',
@@ -23,6 +29,6 @@ class Equipo extends Model
 
     public function estaDisponible()
     {
-        return $this->estado === 'disponible';
+        return $this->estado === self::DISPONIBLE;
     }
 }

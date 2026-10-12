@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\EquipoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -9,14 +9,16 @@ Route::get('/', function () {
         if (auth()->user()->role === 'encargado') {
             return redirect()->route('dashboard.encargado');
         }
+
         return redirect()->route('dashboard.estudiante');
     }
-    
 
     return redirect()->route('login');
 })->name('home');
 
 Route::middleware(['auth', 'verified', 'role:encargado'])->group(function () {
+    Route::resource('equipos', EquipoController::class)->except('show');
+
     Route::get('/dashboard/encargado', function () {
         return view('dashboard.encargado');
     })->name('dashboard.encargado');
@@ -28,11 +30,8 @@ Route::middleware(['auth', 'verified', 'role:estudiante'])->group(function () {
     })->name('dashboard.estudiante');
 });
 
-
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::view('/profile', 'profile')->name('profile.edit');
 });
 
 require __DIR__.'/auth.php';
