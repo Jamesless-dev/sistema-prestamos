@@ -14,15 +14,26 @@ new #[Layout('layouts.guest')] class extends Component
      */
     public function login(): void
     {
-        $this->validate();
+        $this->validate([
+            'form.email' => ['required', 'string', 'email'],
+            'form.password' => ['required', 'string'],
+        ]);
 
         $this->form->authenticate();
 
         Session::regenerate();
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        // Redirigir segun el rol del usuario
+        $user = auth()->user();
+        if ($user->role === 'encargado') {
+            $this->redirectIntended(default: route('dashboard.encargado', absolute: false), navigate: true);
+            return;
+        }
+
+        $this->redirectIntended(default: route('dashboard.estudiante', absolute: false), navigate: true);
     }
-}; ?>
+}; 
+?>
 
 <div>
     <!-- Session Status -->
