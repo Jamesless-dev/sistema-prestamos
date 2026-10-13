@@ -23,14 +23,9 @@ new #[Layout('layouts.guest')] class extends Component
 
         Session::regenerate();
 
-        // Redirigir segun el rol del usuario
-        $user = auth()->user();
-        if ($user->role === 'encargado') {
-            $this->redirectIntended(default: route('dashboard.encargado', absolute: false), navigate: true);
-            return;
-        }
-
-        $this->redirectIntended(default: route('dashboard.estudiante', absolute: false), navigate: true);
+        // Cada rol entra siempre a su panel, aunque haya intentado otra URL.
+        Session::forget('url.intended');
+        $this->redirect(route(auth()->user()->dashboardRoute(), absolute: false), navigate: true);
     }
 }; 
 ?>
