@@ -17,6 +17,19 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    public const ROLE_ENCARGADO = 'encargado';
+    public const ROLE_ESTUDIANTE = 'estudiante';
+
+    /** El destino se decide con el rol guardado en la base de datos. */
+    public function dashboardRoute(): string
+    {
+        return match ($this->role) {
+            self::ROLE_ENCARGADO => 'dashboard.encargado',
+            self::ROLE_ESTUDIANTE => 'dashboard.estudiante',
+            default => abort(403, 'Tu cuenta no tiene un rol autorizado.'),
+        };
+    }
+
     /**
      * Get the attributes that should be cast.
      *
