@@ -76,7 +76,10 @@ class BaseDatosTest extends TestCase
         $equipo = Equipo::factory()->create();
         $prestamo = $equipo->prestamos()->create(['estudiante_id' => $user->id]);
 
-        $this->artisan('migrate:rollback', ['--step' => 1, '--force' => true])->assertSuccessful();
+        $this->artisan('migrate:rollback', [
+            '--path' => 'database/migrations/2026_10_14_062021_protect_prestamos_history.php',
+            '--force' => true,
+        ])->assertSuccessful();
         $this->artisan('migrate', ['--force' => true])->assertSuccessful();
 
         $this->assertDatabaseHas('prestamos', ['id' => $prestamo->id, 'equipo_id' => $equipo->id]);

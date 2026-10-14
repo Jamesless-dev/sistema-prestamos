@@ -9,7 +9,9 @@ use Throwable;
 
 class VerificarEntorno extends Command
 {
-    protected $signature = 'entorno:verificar {--conexion : Comprueba también la conexión real a la base de datos}';
+    protected $signature = 'entorno:verificar
+        {--conexion : Comprueba también la conexión real a la base de datos}
+        {--esquema : Comprueba las tablas requeridas por el proyecto}';
 
     protected $description = 'Comprueba el controlador PDO del PHP que ejecuta este proyecto';
 
@@ -50,7 +52,7 @@ class VerificarEntorno extends Command
 
         $this->info('Controlador '.$extension.' disponible.');
 
-        if ($this->option('conexion')) {
+        if ($this->option('conexion') || $this->option('esquema')) {
             try {
                 $conexion->getPdo();
             } catch (Throwable $e) {
@@ -61,6 +63,32 @@ class VerificarEntorno extends Command
             }
 
             $this->info('Conexión a la base de datos correcta.');
+        }
+
+        if ($this->option('esquema')) {
+            $tablas = ['users', 'equipos', 'prestamos', 'reservas'];
+            if (config('session.driver') === 'database') {
+                $tablas[] = 'sessions';
+            }
+
+            try {
+                $schema = $conexion->getSchemaBuilder();
+                $faltantes = array_filter($tablas, fn (string $tabla): bool => ! $schema->hasTable($tabla));
+            } catch (Throwable $e) {
+                report($e);
+                $this->error('No se pudo comprobar el esquema de la base de datos. Revisa los permisos del usuario configurado.');
+
+                return self::FAILURE;
+            }
+
+            if ($faltantes !== []) {
+                $this->error('Faltan tablas del proyecto: '.implode(', ', $faltantes).'.');
+                $this->line('Ejecuta composer run actualizar para aplicar las migraciones sin borrar los datos existentes.');
+
+                return self::FAILURE;
+            }
+
+            $this->info('Las tablas del proyecto están disponibles.');
         }
 
         return self::SUCCESS;

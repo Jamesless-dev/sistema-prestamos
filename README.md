@@ -25,7 +25,7 @@ Si la carpeta ya tiene datos o un .env configurado, revisa esa configuración an
 ```bash
 composer install
 npm ci --ignore-scripts
-php artisan migrate --seed
+composer run actualizar
 npm run build
 ```
 
@@ -77,9 +77,7 @@ DB_PASSWORD=tu_clave
 Si existe DB_URL en .env, revisa esa URL: también puede definir la conexión. No compartas credenciales reales en Git.
 
 ```bash
-php artisan config:clear
-composer run diagnostico
-php artisan migrate --seed
+composer run actualizar
 php artisan serve
 ```
 
@@ -87,7 +85,7 @@ En PostgreSQL se utiliza una columna calculada almacenada para impedir dos prés
 
 ### Error «could not find driver»
 
-El PHP que ejecuta el proyecto no tiene habilitado el controlador de la conexión configurada. Ejecuta `php artisan entorno:verificar`: muestra el ejecutable, el php.ini cargado y la extensión necesaria. `composer run diagnostico` comprueba también la conexión real sin cambiar datos.
+El PHP que ejecuta el proyecto no tiene habilitado el controlador de la conexión configurada. Ejecuta `php artisan entorno:verificar`: muestra el ejecutable, el php.ini cargado y la extensión necesaria. `composer run diagnostico` comprueba también la conexión real y las tablas necesarias, sin cambiar datos.
 
 Para PostgreSQL en Windows, desde la carpeta del proyecto:
 
@@ -103,7 +101,23 @@ powershell -ExecutionPolicy Bypass -File .\configurar-postgresql.ps1 -PhpPath 'C
 
 Si faltan php_pdo_pgsql.dll o libpq.dll, repara esa instalación con su distribución oficial, de la misma versión y arquitectura. Si PHP no puede cargar la extensión después del cambio, la herramienta restaura la configuración anterior. Si no tienes permisos para editar php.ini, necesitarás usar una terminal con permisos sobre ese archivo.
 
-Detén el servidor actual con Ctrl+C y vuelve a iniciarlo con ese mismo PHP. Después ejecuta `php artisan config:clear`, `composer run diagnostico` y `php artisan migrate --seed`. No uses migrate:fresh para solucionar este error en una base con datos.
+Detén el servidor actual con Ctrl+C, ejecuta `composer run actualizar` y vuelve a iniciarlo con ese mismo PHP. No uses migrate:fresh para solucionar este error en una base con datos.
+
+### Error «no existe la relación reservas» / tabla reservas ausente
+
+La conexión funciona, pero esa base no tiene la tabla reservas. Actualizar los archivos de Git no actualiza automáticamente la base de datos.
+
+Con el código de la rama mejora-base-datos actualizado, ejecuta:
+
+```bash
+composer run actualizar
+```
+
+El comando limpia la configuración, verifica la conexión, aplica migraciones y seeders, comprueba las tablas y limpia las vistas. No regenera APP_KEY ni borra usuarios, equipos, préstamos o reservas existentes.
+
+La migración de reparación crea reservas si falta, incluso cuando una versión anterior de su migración figura como ejecutada. Si la tabla ya existe, conserva sus datos. Revertir únicamente esa reparación también conserva la tabla; su eliminación sigue a cargo de la migración original.
+
+Después ejecuta `composer run diagnostico`: debe indicar que la conexión y las tablas están disponibles. Si falla, revisa que .env apunte a la misma base que utiliza el servidor y que el usuario tenga permisos para crear tablas. Reinicia php artisan serve después de cambiar .env.
 
 ### Reiniciar la demostración
 

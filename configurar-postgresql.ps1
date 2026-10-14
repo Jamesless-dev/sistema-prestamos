@@ -83,7 +83,7 @@ try {
     Write-Host "php.ini: $taskIniPath"
     Write-Host "Respaldo: $taskBackup"
     Write-Host 'Deten el servidor actual con Ctrl+C y reinicialo con ese mismo PHP.'
-    Write-Host 'Despues ejecuta php artisan config:clear, composer run diagnostico y php artisan migrate --seed.'
+    Write-Host 'Despues ejecuta composer run actualizar y reinicia php artisan serve.'
     Write-Host 'Esta herramienta no cambia .env ni borra datos de la base.'
 } catch {
     Write-Error $_.Exception.Message -ErrorAction Continue

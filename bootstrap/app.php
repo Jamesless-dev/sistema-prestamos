@@ -21,7 +21,30 @@ return Application::configure(basePath: dirname(__DIR__))
     })
 
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->render(function (QueryException $exception, Request $request) {
+        $exceptions->render(function (Throwable $error, Request $request) {
+            $exception = $error;
+            while ($exception !== null && ! ($exception instanceof QueryException)) {
+                $exception = $exception->getPrevious();
+            }
+
+            if (! ($exception instanceof QueryException)) {
+                return null;
+            }
+
+            $sqlState = $exception->errorInfo[0] ?? (string) $exception->getCode();
+            $faltaTabla = in_array($sqlState, ['42P01', '42S02'], true)
+                || str_contains($exception->getMessage(), 'no such table: reservas');
+
+            if ($faltaTabla && preg_match('/\b(?:from|into|update|join)\s+["`]?reservas\b/i', $exception->getSql())) {
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'Falta la tabla reservas. Ejecuta las migraciones del proyecto.'], 503);
+                }
+
+                return response()->view('errors.database-schema', [
+                    'mostrarDiagnostico' => app()->environment('local'),
+                ], 503);
+            }
+
             if (! str_contains($exception->getMessage(), 'could not find driver')) {
                 return null;
             }
