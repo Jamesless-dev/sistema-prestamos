@@ -47,4 +47,14 @@ class ConsultaEquiposTest extends TestCase
             ->assertSee('No hay equipos disponibles')->assertDontSee($equipo->codigo)
             ->set('busqueda', '')->assertSee($equipo->codigo);
     }
+
+    public function test_opening_a_filtered_url_restores_the_search_and_matching_results(): void
+    {
+        $available = Equipo::factory()->create(['nombre' => 'Laptop QA']);
+        $other = Equipo::factory()->create(['nombre' => 'Proyector']);
+        $this->actingAs(User::factory()->create());
+
+        Livewire::withQueryParams(['busqueda' => 'laptop'])->test(ConsultaEquipos::class)
+            ->assertSet('busqueda', 'laptop')->assertSee($available->codigo)->assertDontSee($other->codigo);
+    }
 }

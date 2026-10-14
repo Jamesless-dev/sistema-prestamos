@@ -3,13 +3,15 @@
 namespace App\Livewire;
 
 use App\Models\Equipo;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class ConsultaEquipos extends Component
 {
     public $equiposDisponibles;
 
-    public $busqueda = '';
+    #[Url(except: '')]
+    public string $busqueda = '';
 
     public function mount()
     {
