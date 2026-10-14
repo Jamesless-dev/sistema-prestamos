@@ -2,133 +2,72 @@
 
 namespace App\Livewire;
 
-use App\Models\Equipo;
-use App\Models\Prestamo;
 use App\Models\Reserva;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Services\OperacionEquipos;
+use DomainException;
 use Livewire\Component;
 
 class GestionReservas extends Component
 {
-    public $mensajeExito = '';
-    public $mensajeError = '';
+    public string $mensajeExito = '';
 
-    public function mount()
+    public string $mensajeError = '';
+
+    public function mount(): void
     {
         $this->autorizar();
     }
 
     private function autorizar(): void
     {
-        abort_unless(auth()->user()?->role === User::ROLE_ENCARGADO, 403);
+        abort_unless(auth()->user()?->role === User::ROLE_ENCARGADO && auth()->user()->hasVerifiedEmail(), 403);
     }
 
-    private function avisar(string $exito = '', string $error = ''): void
-    {
-        $this->mensajeExito = $exito;
-        $this->mensajeError = $error;
-    }
-
-    public function aprobar($reservaId)
+    private function ejecutar(\Closure $accion, string $mensaje): void
     {
         $this->autorizar();
+        $this->reset('mensajeExito', 'mensajeError');
 
         try {
-            DB::transaction(function () use ($reservaId) {
-                $reserva = Reserva::with('equipo')->lockForUpdate()->findOrFail($reservaId);
-
-                if ($reserva->estado !== Reserva::PENDIENTE) {
-                    throw new \DomainException('Esta reserva ya fue procesada.');
-                }
-
-                if ($reserva->fecha_fin->lte(now())) {
-                    throw new \DomainException('No se puede aprobar: el horario de la reserva ya pasó.');
-                }
-
-                if (Reserva::hayConflicto($reserva->equipo_id, $reserva->fecha_inicio, $reserva->fecha_fin, $reserva->id)) {
-                    throw new \DomainException('No se puede aprobar: el equipo ya tiene otra reserva aprobada en ese horario.');
-                }
-
-                $reserva->update(['estado' => Reserva::APROBADA]);
-
-                if ($reserva->equipo->estado === Equipo::DISPONIBLE) {
-                    $reserva->equipo->update(['estado' => Equipo::RESERVADO]);
-                }
-            });
-
-            $this->avisar('Reserva aprobada. El equipo quedó marcado como Reservado.');
-        } catch (\DomainException $e) {
-            $this->avisar('', $e->getMessage());
+            $accion();
+            $this->mensajeExito = $mensaje;
+        } catch (DomainException $e) {
+            $this->mensajeError = $e->getMessage();
         } catch (\Throwable $e) {
-            $this->avisar('', 'Ocurrió un error al aprobar la reserva.');
+            report($e);
+            $this->mensajeError = 'No se pudo procesar la reserva. Actualiza la página e inténtalo de nuevo.';
         }
     }
 
-    public function rechazar($reservaId)
+    public function aprobar(int $reservaId, OperacionEquipos $operaciones): void
     {
-        $this->autorizar();
-
-        $reserva = Reserva::where('estado', Reserva::PENDIENTE)->findOrFail($reservaId);
-        $reserva->update(['estado' => Reserva::RECHAZADA]);
-
-        $this->avisar('Reserva rechazada.');
+        $this->ejecutar(fn () => $operaciones->aprobarReserva($reservaId), 'Reserva aprobada. El estado del equipo fue actualizado.');
     }
 
-    public function cancelar($reservaId)
+    public function rechazar(int $reservaId, OperacionEquipos $operaciones): void
     {
-        $this->autorizar();
-
-        $reserva = Reserva::with('equipo')->where('estado', Reserva::APROBADA)->findOrFail($reservaId);
-        $reserva->update(['estado' => Reserva::CANCELADA]);
-        $reserva->equipo->sincronizarEstadoReserva();
-
-        $this->avisar('Reserva cancelada y equipo liberado.');
+        $this->ejecutar(fn () => $operaciones->rechazarReserva($reservaId), 'Reserva rechazada.');
     }
 
-    public function entregar($reservaId)
+    public function cancelar(int $reservaId, OperacionEquipos $operaciones): void
     {
-        $this->autorizar();
+        $this->ejecutar(fn () => $operaciones->cancelarReserva($reservaId), 'Reserva cancelada. El estado del equipo fue actualizado.');
+    }
 
-        try {
-            DB::transaction(function () use ($reservaId) {
-                $reserva = Reserva::with('equipo')->lockForUpdate()->findOrFail($reservaId);
-
-                if ($reserva->estado !== Reserva::APROBADA) {
-                    throw new \DomainException('Solo se pueden entregar reservas aprobadas.');
-                }
-
-                if ($reserva->equipo->estado === Equipo::PRESTADO) {
-                    throw new \DomainException('El equipo todavía está prestado a otra persona.');
-                }
-
-                Prestamo::create([
-                    'equipo_id' => $reserva->equipo_id,
-                    'estudiante_id' => $reserva->estudiante_id,
-                    'observaciones' => 'Entrega de la reserva #' . $reserva->id,
-                ]);
-
-                $reserva->equipo->update(['estado' => Equipo::PRESTADO]);
-                $reserva->update(['estado' => Reserva::FINALIZADA]);
-            });
-
-            $this->avisar('Equipo entregado: la reserva se registró como préstamo activo.');
-        } catch (\DomainException $e) {
-            $this->avisar('', $e->getMessage());
-        } catch (\Throwable $e) {
-            $this->avisar('', 'Ocurrió un error al entregar el equipo.');
-        }
+    public function entregar(int $reservaId, OperacionEquipos $operaciones): void
+    {
+        $this->ejecutar(fn () => $operaciones->entregarReserva($reservaId), 'Equipo entregado y registrado como préstamo activo.');
     }
 
     public function render()
     {
+        $this->autorizar();
+
         return view('livewire.gestion-reservas', [
-            'pendientes' => Reserva::with(['equipo', 'estudiante'])
-                ->where('estado', Reserva::PENDIENTE)->orderBy('fecha_inicio')->get(),
-            'aprobadas' => Reserva::with(['equipo', 'estudiante'])
-                ->where('estado', Reserva::APROBADA)->orderBy('fecha_inicio')->get(),
-            'historial' => Reserva::with(['equipo', 'estudiante'])
-                ->whereIn('estado', [Reserva::RECHAZADA, Reserva::CANCELADA, Reserva::FINALIZADA])
+            'pendientes' => Reserva::with(['equipo', 'estudiante'])->where('estado', Reserva::PENDIENTE)->orderBy('fecha_inicio')->get(),
+            'aprobadas' => Reserva::with(['equipo', 'estudiante'])->where('estado', Reserva::APROBADA)->orderBy('fecha_inicio')->get(),
+            'historial' => Reserva::with(['equipo', 'estudiante'])->whereIn('estado', [Reserva::RECHAZADA, Reserva::CANCELADA, Reserva::FINALIZADA])
                 ->latest('updated_at')->limit(10)->get(),
         ]);
     }

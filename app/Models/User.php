@@ -2,23 +2,26 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password',"role"])]
+#[Fillable(['name', 'email', 'password', 'role'])]
 #[Hidden(['password', 'remember_token'])]
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     public const ROLE_ENCARGADO = 'encargado';
+
     public const ROLE_ESTUDIANTE = 'estudiante';
+
+    protected $attributes = ['role' => self::ROLE_ESTUDIANTE];
 
     /** El destino se decide con el rol guardado en la base de datos. */
     public function dashboardRoute(): string
@@ -43,8 +46,13 @@ class User extends Authenticatable
         ];
     }
 
-        public function prestamos()
-        {
-            return $this->hasMany(Prestamo::class, 'estudiante_id');
-        }
+    public function prestamos()
+    {
+        return $this->hasMany(Prestamo::class, 'estudiante_id');
+    }
+
+    public function reservas()
+    {
+        return $this->hasMany(Reserva::class, 'estudiante_id');
+    }
 }

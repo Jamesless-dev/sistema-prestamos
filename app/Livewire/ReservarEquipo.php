@@ -5,18 +5,26 @@ namespace App\Livewire;
 use App\Models\Equipo;
 use App\Models\Reserva;
 use App\Models\User;
+use App\Services\OperacionEquipos;
 use Carbon\Carbon;
 use Livewire\Component;
 
 class ReservarEquipo extends Component
 {
     public $equipo_id = '';
+
     public $fecha = '';
+
     public $hora_inicio = '';
+
     public $hora_fin = '';
+
     public $observaciones = '';
+
     public $mes = '';
+
     public $mensajeExito = '';
+
     public $mensajeError = '';
 
     public function mount()
@@ -27,7 +35,7 @@ class ReservarEquipo extends Component
 
     private function autorizar(): void
     {
-        abort_unless(auth()->user()?->role === User::ROLE_ESTUDIANTE, 403);
+        abort_unless(auth()->user()?->role === User::ROLE_ESTUDIANTE && auth()->user()->hasVerifiedEmail(), 403);
     }
 
     private function inicioMes(): Carbon
@@ -36,7 +44,7 @@ class ReservarEquipo extends Component
             $this->mes = now()->format('Y-m');
         }
 
-        return Carbon::parse($this->mes . '-01')->startOfDay();
+        return Carbon::parse($this->mes.'-01')->startOfDay();
     }
 
     public function updatedEquipoId()
@@ -47,6 +55,7 @@ class ReservarEquipo extends Component
 
     public function mesAnterior()
     {
+        $this->autorizar();
         $anterior = $this->inicioMes()->subMonthNoOverflow();
 
         if ($anterior->format('Y-m') >= now()->format('Y-m')) {
@@ -56,6 +65,7 @@ class ReservarEquipo extends Component
 
     public function mesSiguiente()
     {
+        $this->autorizar();
         $this->mes = $this->inicioMes()->addMonthNoOverflow()->format('Y-m');
     }
 
@@ -70,14 +80,14 @@ class ReservarEquipo extends Component
         $this->fecha = $fecha;
     }
 
-    public function reservar()
+    public function reservar(OperacionEquipos $operaciones)
     {
         $this->autorizar();
         $this->mensajeExito = '';
         $this->mensajeError = '';
 
         $this->validate([
-            'equipo_id' => 'required|exists:equipos,id',
+            'equipo_id' => 'required|integer|exists:equipos,id',
             'fecha' => 'required|date_format:Y-m-d|after_or_equal:today',
             'hora_inicio' => 'required|date_format:H:i',
             'hora_fin' => 'required|date_format:H:i|after:hora_inicio',
@@ -95,46 +105,47 @@ class ReservarEquipo extends Component
             'hora_fin' => 'hora de fin',
         ]);
 
-        $inicio = Carbon::createFromFormat('Y-m-d H:i', $this->fecha . ' ' . $this->hora_inicio);
-        $fin = Carbon::createFromFormat('Y-m-d H:i', $this->fecha . ' ' . $this->hora_fin);
+        $inicio = Carbon::createFromFormat('Y-m-d H:i', $this->fecha.' '.$this->hora_inicio);
+        $fin = Carbon::createFromFormat('Y-m-d H:i', $this->fecha.' '.$this->hora_fin);
 
         if ($inicio->lte(now())) {
             $this->addError('hora_inicio', 'La reserva debe ser para una fecha y hora futuras.');
+
             return;
         }
 
-        if (Reserva::hayConflicto($this->equipo_id, $inicio, $fin)) {
-            $this->mensajeError = 'Ese equipo ya está reservado en ese horario. Elige otro horario u otro día.';
-            return;
+        try {
+            $operaciones->solicitarReserva((int) $this->equipo_id, auth()->id(), $inicio, $fin, $this->observaciones ?: null);
+            $this->reset(['fecha', 'hora_inicio', 'hora_fin', 'observaciones']);
+            $this->mensajeExito = '¡Reserva enviada! El encargado la revisará y la aprobará o rechazará.';
+        } catch (\DomainException $e) {
+            $this->mensajeError = $e->getMessage();
+        } catch (\Throwable $e) {
+            report($e);
+            $this->mensajeError = 'No se pudo guardar la reserva. Actualiza la página e inténtalo de nuevo.';
         }
-
-        Reserva::create([
-            'equipo_id' => $this->equipo_id,
-            'estudiante_id' => auth()->id(),
-            'fecha_inicio' => $inicio,
-            'fecha_fin' => $fin,
-            'estado' => Reserva::PENDIENTE,
-            'observaciones' => $this->observaciones ?: null,
-        ]);
-
-        $this->reset(['fecha', 'hora_inicio', 'hora_fin', 'observaciones']);
-        $this->mensajeExito = '¡Reserva enviada! El encargado la revisará y la aprobará o rechazará.';
     }
 
-    public function cancelar($reservaId)
+    public function cancelar(int $reservaId, OperacionEquipos $operaciones)
     {
         $this->autorizar();
 
-        $reserva = Reserva::with('equipo')
+        Reserva::query()
             ->where('estudiante_id', auth()->id())
             ->whereIn('estado', [Reserva::PENDIENTE, Reserva::APROBADA])
             ->findOrFail($reservaId);
 
-        $reserva->update(['estado' => Reserva::CANCELADA]);
-        $reserva->equipo->sincronizarEstadoReserva();
-
         $this->mensajeError = '';
-        $this->mensajeExito = 'Reserva cancelada.';
+        $this->mensajeExito = '';
+        try {
+            $operaciones->cancelarReserva($reservaId, auth()->id());
+            $this->mensajeExito = 'Reserva cancelada.';
+        } catch (\DomainException $e) {
+            $this->mensajeError = $e->getMessage();
+        } catch (\Throwable $e) {
+            report($e);
+            $this->mensajeError = 'No se pudo cancelar la reserva. Inténtalo de nuevo.';
+        }
     }
 
     private function construirCalendario(Carbon $inicioMes): array
@@ -157,6 +168,7 @@ class ReservarEquipo extends Component
 
     public function render()
     {
+        $this->autorizar();
         $inicioMes = $this->inicioMes();
         $equipoSeleccionado = $this->equipo_id ? Equipo::find($this->equipo_id) : null;
 

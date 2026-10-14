@@ -10,11 +10,11 @@ class EncargadoSeeder extends Seeder
 {
     public function run(): void
     {
-        User::create([
+        User::firstOrCreate(['email' => 'encargado@tecsup.edu.pe'], [
             'name' => 'Administrador',
-            'email' => 'encargado@tecsup.edu.pe',
             'password' => Hash::make('Admin123'),
             'role' => 'encargado',
+            'email_verified_at' => now(),
         ]);
     }
 }

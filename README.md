@@ -1,58 +1,161 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistema de préstamos de equipos
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplicación académica para administrar equipos de laboratorio, registrar préstamos y devoluciones, y solicitar reservas por horario. Desarrollada con Laravel 13, Livewire 4, Volt, Blade y Tailwind CSS 4.
 
-## About Laravel
+## Requisitos
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.3 o superior y Composer 2. El PHP 8.2 de algunas instalaciones de XAMPP no es compatible.
+- Extensiones PHP: PDO, pdo_sqlite (o pdo_mysql), mbstring, openssl, fileinfo, curl, DOM y XML.
+- Node.js 22.12 o superior (recomendado Node.js 24) y npm.
+- SQLite para una demostración local; MySQL 8 para una instalación compartida.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Instalación rápida
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone https://github.com/Jamesless-dev/sistema-prestamos.git
+cd sistema-prestamos
+composer run setup
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Abre http://localhost:8000. El comando setup instala dependencias, crea .env si no existe, genera APP_KEY, ejecuta las migraciones y seeders, y compila los estilos.
 
-## Contributing
+Si la carpeta ya tiene datos o un .env configurado, revisa esa configuración antes de ejecutar setup: se usa la conexión que indique .env. Para actualizar una instalación existente sin regenerar su APP_KEY:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+composer install
+npm ci --ignore-scripts
+php artisan migrate --seed
+npm run build
+```
 
-## Code of Conduct
+No cambies APP_KEY en una instalación existente: invalidaría datos cifrados y sesiones.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Instalación manual en Windows PowerShell
 
-## Security Vulnerabilities
+```powershell
+composer install
+Copy-Item .env.example .env
+New-Item -ItemType File database/database.sqlite
+php artisan key:generate
+php artisan migrate --seed
+npm ci --ignore-scripts
+npm run build
+php artisan serve
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+En Linux/macOS, usa `cp .env.example .env` y `touch database/database.sqlite`.
 
-## License
+### MySQL
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Crea una base de datos vacía y configura .env:
+
+```dotenv
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sistema_prestamos
+DB_USERNAME=tu_usuario
+DB_PASSWORD=tu_clave
+```
+
+Después ejecuta `php artisan config:clear` y `php artisan migrate --seed`.
+
+### Reiniciar la demostración
+
+```bash
+php artisan migrate:fresh --seed
+```
+
+**Este comando elimina todas las tablas de la base configurada. Úsalo únicamente para reiniciar datos de demostración.** Para añadir los datos de prueba sin borrar movimientos, usa `php artisan db:seed`: los seeders no duplican ni sobrescriben registros existentes.
+
+## Cuentas de prueba
+
+| Rol | Correo | Contraseña |
+| --- | --- | --- |
+| Encargado | encargado@tecsup.edu.pe | Admin123 |
+| Estudiante | estudiante1@tecsup.edu.pe | Estudiante123 |
+| Estudiante | estudiante2@tecsup.edu.pe | Estudiante123 |
+
+Los tres usuarios tienen el correo verificado. Se crean ocho equipos (EQ-001 a EQ-008), inicialmente disponibles. Estas credenciales son exclusivamente para la demostración local; cámbialas antes de publicar el sistema.
+
+El registro público crea únicamente estudiantes. Las cuentas nuevas deben verificar su correo antes de entrar al panel. Con `MAIL_MAILER=log`, el enlace aparece en `storage/logs/laravel.log`; para enviar correos reales, configura SMTP en .env.
+
+## Flujo del sistema
+
+- **Encargado:** entra al panel administrativo, administra equipos, selecciona un estudiante y registra un préstamo. El equipo pasa a Prestado.
+- **Devolución:** se guarda fecha_devolucion en el mismo registro. El equipo pasa a Disponible, o a Reservado si todavía tiene una reserva aprobada vigente.
+- **Estudiante:** consulta equipos disponibles y solicita reservas futuras. Solo puede consultar y cancelar sus propias solicitudes.
+- **Reserva:** Pendiente → Aprobada/Rechazada; una aprobada puede Cancelarse o entregarse dentro de su horario. Al entregar, se crea un préstamo y la reserva pasa a Finalizada.
+- Las reservas pendientes pueden competir por un horario; solo una solicitud con horario coincidente puede aprobarse. Horarios consecutivos sí se permiten.
+- Por precaución, una reserva aprobada marca el equipo como Reservado desde su aprobación, aunque sea futura. Los préstamos directos no se permiten mientras haya una reserva aprobada vigente.
+- Un equipo puede tener una reserva futura mientras está prestado; su entrega espera a que se registre la devolución.
+- Las reservas vencidas sin entrega se cancelan automáticamente al ejecutar el proceso de expiración. Finalizada significa entregada; la devolución se consulta en préstamos.
+
+### Proceso de expiración
+
+En desarrollo, usa otra terminal:
+
+```bash
+php artisan schedule:work
+```
+
+O ejecuta `php artisan reservas:expirar` manualmente. En un servidor, programa `php artisan schedule:run` cada minuto. Sin ese proceso, una reserva vencida puede seguir apareciendo hasta que se recalcula el estado del equipo.
+
+## Base de datos y relaciones
+
+```text
+users (role: encargado/estudiante)
+  ├── hasMany prestamos mediante estudiante_id
+  └── hasMany reservas mediante estudiante_id
+equipos
+  ├── hasMany prestamos
+  └── hasMany reservas
+prestamos → belongsTo equipo y estudiante
+reservas  → belongsTo equipo y estudiante
+```
+
+- equipos: código único, nombre, categoría y estado.
+- prestamos: equipo_id, estudiante_id, fecha_prestamo, fecha_devolucion nullable y observaciones.
+- reservas: equipo_id, estudiante_id, fecha_inicio, fecha_fin, estado y observaciones.
+- Las claves foráneas impiden borrar equipos o usuarios con historial. La interfaz muestra un mensaje explicativo.
+- Hay índices para buscar préstamos activos y conflictos de reservas.
+- Una columna calculada con índice único permite conservar múltiples préstamos devueltos, pero impide dos préstamos activos del mismo equipo. Si una instalación anterior ya tiene duplicados activos, deben corregirse antes de aplicar la migración; esta no elimina historial automáticamente.
+- Las operaciones bloquean primero el equipo dentro de una transacción y vuelven a comprobar el estado antes de guardar. En MySQL, esto serializa las operaciones del mismo equipo. SQLite serializa las escrituras a nivel de base y es adecuado para la demostración local.
+- El CRUD permite editar código, nombre y categoría; el estado debe coincidir con los movimientos. Un equipo nuevo siempre se registra Disponible.
+
+## Archivos principales y responsabilidades
+
+| Integrante | Archivos y explicación |
+| --- | --- |
+| 1 - Autenticación | LoginForm, Actions/Logout y páginas Volt de auth: credenciales, sesión y cierre de sesión. |
+| 2 - Roles | RoleMiddleware, User::dashboardRoute, routes/web.php: acceso y redirección por rol. |
+| 3 - CRUD | EquipoController, EquipoRequest, modelo Equipo y vistas equipos. |
+| 4 - Préstamos | GestionPrestamos y OperacionEquipos::prestar; también solicitud, aprobación y entrega de reservas. |
+| 5 - Devolución e integración | OperacionEquipos::devolver, cancelación, estados e historial. |
+| 6 - Base de datos | database/migrations, database/seeders y relaciones de los modelos. |
+| 7 - QA y entrega | tests/Feature, pruebas de instalación, README y docs/resumen-proyecto.pdf. |
+
+OperacionEquipos concentra las reglas compartidas de préstamos y reservas. Los componentes Livewire validan los formularios y autorizan al usuario en cada acción. El middleware de rol y la verificación de correo persisten en las solicitudes de Livewire.
+
+## Pruebas y comprobaciones
+
+```bash
+php artisan test --compact
+php vendor/bin/pint --test
+npm run build
+composer audit
+npm audit
+```
+
+Las pruebas usan SQLite en memoria por defecto y no borran la base local. Cubren autenticación, roles, CRUD, seeders repetibles, claves foráneas, historial, préstamos duplicados, devoluciones repetidas, reservas superpuestas, propiedad de solicitudes y expiración.
+
+GitHub Actions ejecuta la suite con SQLite y MySQL, además de formato y compilación del frontend. Los cambios se revisan mediante Pull Request antes de integrarse a main.
+
+Para la demostración, prueba ambos roles, intenta entrar como estudiante a /equipos/create, registra y devuelve un préstamo, revisa el historial y recorre solicitud → aprobación → entrega de reserva. Comprueba también errores de credenciales y campos obligatorios.
+
+## Configuración
+
+El idioma predeterminado es español y la zona horaria es America/Lima, configurables con APP_LOCALE y APP_TIMEZONE. En un servidor publicado, usa APP_ENV=production y APP_DEBUG=false, credenciales propias y un transporte de correo real.
+
+Laravel Boost es una dependencia de desarrollo requerida por las instrucciones del repositorio. No es necesario para usar el sistema ni se instala con `composer install --no-dev`.
