@@ -10,9 +10,13 @@ class Reserva extends Model
     use HasFactory;
 
     public const PENDIENTE = 'pendiente';
+
     public const APROBADA = 'aprobada';
+
     public const RECHAZADA = 'rechazada';
+
     public const CANCELADA = 'cancelada';
+
     public const FINALIZADA = 'finalizada';
 
     protected $fillable = [

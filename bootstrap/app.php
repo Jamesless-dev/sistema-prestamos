@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\RoleMiddleware;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,11 +16,57 @@ return Application::configure(basePath: dirname(__DIR__))
 
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
-            'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'role' => RoleMiddleware::class,
         ]);
     })
-    
+
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(function (Throwable $error, Request $request) {
+            $exception = $error;
+            while ($exception !== null && ! ($exception instanceof QueryException)) {
+                $exception = $exception->getPrevious();
+            }
+
+            if (! ($exception instanceof QueryException)) {
+                return null;
+            }
+
+            $sqlState = $exception->errorInfo[0] ?? (string) $exception->getCode();
+            $faltaTabla = in_array($sqlState, ['42P01', '42S02'], true)
+                || str_contains($exception->getMessage(), 'no such table: reservas');
+
+            if ($faltaTabla && preg_match('/\b(?:from|into|update|join)\s+["`]?reservas\b/i', $exception->getSql())) {
+                if ($request->expectsJson()) {
+                    return response()->json(['message' => 'Falta la tabla reservas. Ejecuta las migraciones del proyecto.'], 503);
+                }
+
+                return response()->view('errors.database-schema', [
+                    'mostrarDiagnostico' => app()->environment('local'),
+                ], 503);
+            }
+
+            if (! str_contains($exception->getMessage(), 'could not find driver')) {
+                return null;
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'La conexión de base de datos no está disponible: falta su controlador PHP.'], 503);
+            }
+
+            $driver = config('database.connections.'.$exception->getConnectionName().'.driver', config('database.default'));
+            $extension = match ($driver) {
+                'pgsql' => 'pdo_pgsql',
+                'mysql', 'mariadb' => 'pdo_mysql',
+                'sqlite' => 'pdo_sqlite',
+                default => 'PDO',
+            };
+
+            return response()->view('errors.database-driver', [
+                'extension' => $extension,
+                'mostrarDiagnostico' => app()->environment('local'),
+            ], 503);
+        });
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

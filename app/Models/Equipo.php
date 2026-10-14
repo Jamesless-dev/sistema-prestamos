@@ -36,10 +36,20 @@ class Equipo extends Model
 
     public function sincronizarEstadoReserva(): void
     {
-        if ($this->estado === self::RESERVADO
-            && ! $this->reservas()->where('estado', Reserva::APROBADA)->exists()) {
-            $this->update(['estado' => self::DISPONIBLE]);
+        $this->reservas()->where('estado', Reserva::APROBADA)
+            ->where('fecha_fin', '<=', now())->update(['estado' => Reserva::CANCELADA]);
+
+        $this->update(['estado' => $this->estadoSegunMovimientos()]);
+    }
+
+    public function estadoSegunMovimientos(): string
+    {
+        if ($this->prestamos()->whereNull('fecha_devolucion')->exists()) {
+            return self::PRESTADO;
         }
+
+        return $this->reservas()->where('estado', Reserva::APROBADA)
+            ->where('fecha_fin', '>', now())->exists() ? self::RESERVADO : self::DISPONIBLE;
     }
 
     public function estaDisponible()

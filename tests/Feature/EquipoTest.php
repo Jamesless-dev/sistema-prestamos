@@ -44,7 +44,7 @@ class EquipoTest extends TestCase
 
     public static function estados(): array
     {
-        return [['disponible'], ['prestado']];
+        return [['disponible']];
     }
 
     public function test_encargado_can_update_without_changing_unique_code_and_change_state(): void
@@ -56,6 +56,7 @@ class EquipoTest extends TestCase
             'categoria' => 'Computación',
             'estado' => 'prestado',
         ];
+        $prestamo = $equipo->prestamos()->create(['estudiante_id' => User::factory()->create()->id]);
         $this->actingAs(User::factory()->create(['role' => 'encargado']))
             ->put(route('equipos.update', $equipo), $datos)
             ->assertRedirect(route('equipos.index'))->assertSessionHas('success');
@@ -63,6 +64,9 @@ class EquipoTest extends TestCase
         $this->assertFalse($equipo->fresh()->estaDisponible());
 
         $datos['estado'] = 'disponible';
+        $this->put(route('equipos.update', $equipo), $datos)->assertSessionHasErrors('estado');
+        $this->assertSame('prestado', $equipo->fresh()->estado);
+        $prestamo->update(['fecha_devolucion' => now()]);
         $this->put(route('equipos.update', $equipo), $datos)->assertRedirect(route('equipos.index'));
         $this->assertTrue($equipo->fresh()->estaDisponible());
     }
@@ -182,5 +186,27 @@ class EquipoTest extends TestCase
         $this->get('/equipos/99999/edit')->assertNotFound();
         $this->put('/equipos/99999', Equipo::factory()->raw())->assertNotFound();
         $this->delete('/equipos/99999')->assertNotFound();
+    }
+
+    public function test_new_equipment_cannot_be_created_as_borrowed_or_reserved(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'encargado']));
+        foreach (['prestado', 'reservado'] as $estado) {
+            $this->post(route('equipos.store'), Equipo::factory()->raw(['estado' => $estado]))->assertSessionHasErrors('estado');
+        }
+        $this->assertDatabaseCount('equipos', 0);
+    }
+
+    public function test_equipment_with_reservation_history_cannot_be_deleted(): void
+    {
+        $equipo = Equipo::factory()->create();
+        $reserva = $equipo->reservas()->create([
+            'estudiante_id' => User::factory()->create()->id,
+            'fecha_inicio' => now()->addDay(), 'fecha_fin' => now()->addDay()->addHour(),
+        ]);
+        $this->actingAs(User::factory()->create(['role' => 'encargado']))
+            ->delete(route('equipos.destroy', $equipo))->assertSessionHas('error');
+        $this->assertModelExists($equipo);
+        $this->assertModelExists($reserva);
     }
 }

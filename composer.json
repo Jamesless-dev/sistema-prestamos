@@ -14,6 +14,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "laravel/boost": "^2.10",
         "laravel/breeze": "^2.4",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
@@ -38,10 +39,21 @@
         "setup": [
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
+            "@php artisan config:clear",
+            "@php artisan entorno:verificar",
             "@php artisan key:generate",
-            "@php artisan migrate --force",
+            "@php artisan migrate --seed --force",
+            "@php artisan entorno:verificar --esquema",
             "npm install --ignore-scripts",
             "npm run build"
+        ],
+        "diagnostico": "@php artisan entorno:verificar --conexion --esquema",
+        "actualizar": [
+            "@php artisan config:clear",
+            "@php artisan entorno:verificar --conexion",
+            "@php artisan migrate --seed",
+            "@php artisan entorno:verificar --conexion --esquema",
+            "@php artisan view:clear"
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
@@ -82,6 +94,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.3.0"
         }
     },
     "minimum-stability": "stable",

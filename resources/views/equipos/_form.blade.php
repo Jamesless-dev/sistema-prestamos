@@ -1,5 +1,9 @@
 @csrf
 
+@if(session('error'))
+    <div class="mb-4 rounded bg-red-50 p-4 text-red-700" role="alert">{{ session('error') }}</div>
+@endif
+
 <div>
     <x-input-label for="codigo" value="Código" />
     <x-text-input id="codigo" name="codigo" type="text" class="block mt-1 w-full" :value="old('codigo', $equipo->codigo)" required maxlength="255" autofocus />
@@ -21,11 +25,12 @@
 <div class="mt-4">
     <x-input-label for="estado" value="Estado" />
     <select id="estado" name="estado" class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>
-        @foreach (\App\Models\Equipo::ESTADOS as $estado)
+        @foreach ([$equipo->exists ? $equipo->estadoSegunMovimientos() : \App\Models\Equipo::DISPONIBLE] as $estado)
             <option value="{{ $estado }}" @selected(old('estado', $equipo->estado ?? \App\Models\Equipo::DISPONIBLE) === $estado)>{{ ucfirst($estado) }}</option>
         @endforeach
     </select>
     <x-input-error :messages="$errors->get('estado')" class="mt-2" />
+    <p class="mt-2 text-sm text-gray-500">El estado se actualiza al prestar, devolver o gestionar una reserva.</p>
 </div>
 
 <div class="flex items-center gap-4 mt-6">

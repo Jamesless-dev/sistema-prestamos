@@ -17,7 +17,21 @@ new class extends Component
             'password' => ['required', 'string', 'current_password'],
         ]);
 
-        tap(Auth::user(), $logout(...))->delete();
+        $user = Auth::user();
+        if ($user->prestamos()->exists() || $user->reservas()->exists()) {
+            $this->addError('password', 'No puedes eliminar una cuenta con historial de préstamos o reservas.');
+            return;
+        }
+
+        try {
+            $logout();
+            $user->delete();
+        } catch (\Illuminate\Database\QueryException $e) {
+            report($e);
+            Auth::login($user);
+            $this->addError('password', 'No se pudo eliminar la cuenta. Puede tener movimientos asociados.');
+            return;
+        }
 
         $this->redirect('/', navigate: true);
     }

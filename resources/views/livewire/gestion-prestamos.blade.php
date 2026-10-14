@@ -179,5 +179,28 @@
             </div>
         @endif
     </div>
-    
+    <div class="mt-10">
+        <h3 class="text-2xl font-bold text-gray-800 mb-4">Historial de devoluciones</h3>
+        <div class="overflow-x-auto bg-white rounded-lg shadow-md">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-100"><tr>
+                    <th class="px-4 py-3">Equipo</th><th class="px-4 py-3">Estudiante</th>
+                    <th class="px-4 py-3">Préstamo</th><th class="px-4 py-3">Devolución</th>
+                </tr></thead>
+                <tbody>
+                    @forelse($historial as $prestamo)
+                        <tr class="border-t" wire:key="historial-{{ $prestamo->id }}">
+                            <td class="px-4 py-3">{{ $prestamo->equipo->codigo }} - {{ $prestamo->equipo->nombre }}</td>
+                            <td class="px-4 py-3">{{ $prestamo->estudiante->name }}</td>
+                            <td class="px-4 py-3">{{ $prestamo->fecha_prestamo->format('d/m/Y H:i') }}</td>
+                            <td class="px-4 py-3">{{ $prestamo->fecha_devolucion->format('d/m/Y H:i') }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="4" class="px-4 py-6 text-gray-500">Todavía no hay devoluciones registradas.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-4">{{ $historial->links() }}</div>
+    </div>
 </div>
