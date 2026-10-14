@@ -39,11 +39,14 @@
         "setup": [
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
+            "@php artisan config:clear",
+            "@php artisan entorno:verificar",
             "@php artisan key:generate",
             "@php artisan migrate --seed --force",
             "npm install --ignore-scripts",
             "npm run build"
         ],
+        "diagnostico": "@php artisan entorno:verificar --conexion",
         "dev": [
             "Composer\\Config::disableProcessTimeout",
             "@php artisan dev"

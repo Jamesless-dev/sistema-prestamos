@@ -10,8 +10,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        database: [sqlite, mysql]
+        database: [sqlite, mysql, pgsql]
     services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: testing
+          POSTGRES_DB: sistema_prestamos
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d sistema_prestamos"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
       mysql:
         image: mysql:8.0
         env:
@@ -29,15 +42,15 @@ jobs:
       DB_CONNECTION: ${{ matrix.database }}
       DB_DATABASE: ${{ matrix.database == 'sqlite' && ':memory:' || 'sistema_prestamos' }}
       DB_HOST: 127.0.0.1
-      DB_PORT: 3306
-      DB_USERNAME: root
+      DB_PORT: ${{ matrix.database == 'pgsql' && '5432' || '3306' }}
+      DB_USERNAME: ${{ matrix.database == 'pgsql' && 'postgres' || 'root' }}
       DB_PASSWORD: testing
     steps:
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
-          extensions: mbstring, pdo_sqlite, pdo_mysql
+          extensions: mbstring, pdo_sqlite, pdo_mysql, pdo_pgsql
           coverage: none
       - uses: actions/setup-node@v4
         with:

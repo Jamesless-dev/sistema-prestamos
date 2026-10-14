@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\RoleMiddleware;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,6 +21,29 @@ return Application::configure(basePath: dirname(__DIR__))
     })
 
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(function (QueryException $exception, Request $request) {
+            if (! str_contains($exception->getMessage(), 'could not find driver')) {
+                return null;
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'La conexión de base de datos no está disponible: falta su controlador PHP.'], 503);
+            }
+
+            $driver = config('database.connections.'.$exception->getConnectionName().'.driver', config('database.default'));
+            $extension = match ($driver) {
+                'pgsql' => 'pdo_pgsql',
+                'mysql', 'mariadb' => 'pdo_mysql',
+                'sqlite' => 'pdo_sqlite',
+                default => 'PDO',
+            };
+
+            return response()->view('errors.database-driver', [
+                'extension' => $extension,
+                'mostrarDiagnostico' => app()->environment('local'),
+            ], 503);
+        });
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

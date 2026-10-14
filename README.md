@@ -5,9 +5,9 @@ Aplicación académica para administrar equipos de laboratorio, registrar prést
 ## Requisitos
 
 - PHP 8.3 o superior y Composer 2. El PHP 8.2 de algunas instalaciones de XAMPP no es compatible.
-- Extensiones PHP: PDO, pdo_sqlite (o pdo_mysql), mbstring, openssl, fileinfo, curl, DOM y XML.
+- Extensiones PHP: PDO y el controlador de la base elegida (pdo_sqlite, pdo_mysql o pdo_pgsql), mbstring, openssl, fileinfo, curl, DOM y XML.
 - Node.js 22.12 o superior (recomendado Node.js 24) y npm.
-- SQLite para una demostración local; MySQL 8 para una instalación compartida.
+- SQLite para una demostración local; MySQL 8 o PostgreSQL 14 o superior para una instalación compartida.
 
 ## Instalación rápida
 
@@ -18,7 +18,7 @@ composer run setup
 php artisan serve
 ```
 
-Abre http://localhost:8000. El comando setup instala dependencias, crea .env si no existe, genera APP_KEY, ejecuta las migraciones y seeders, y compila los estilos.
+Abre http://localhost:8000. El comando setup instala dependencias, crea .env si no existe, comprueba el controlador PHP de la conexión configurada, genera APP_KEY, ejecuta las migraciones y seeders, y compila los estilos.
 
 Si la carpeta ya tiene datos o un .env configurado, revisa esa configuración antes de ejecutar setup: se usa la conexión que indique .env. Para actualizar una instalación existente sin regenerar su APP_KEY:
 
@@ -60,6 +60,50 @@ DB_PASSWORD=tu_clave
 ```
 
 Después ejecuta `php artisan config:clear` y `php artisan migrate --seed`.
+
+### PostgreSQL
+
+Crea la base en PostgreSQL y configura los datos de tu instalación en .env:
+
+```dotenv
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=prestamos_laboratorio
+DB_USERNAME=postgres
+DB_PASSWORD=tu_clave
+```
+
+Si existe DB_URL en .env, revisa esa URL: también puede definir la conexión. No compartas credenciales reales en Git.
+
+```bash
+php artisan config:clear
+composer run diagnostico
+php artisan migrate --seed
+php artisan serve
+```
+
+En PostgreSQL se utiliza una columna calculada almacenada para impedir dos préstamos activos del mismo equipo. En SQLite/MySQL se conserva la columna virtual. Las pruebas de GitHub incluyen PostgreSQL 16.
+
+### Error «could not find driver»
+
+El PHP que ejecuta el proyecto no tiene habilitado el controlador de la conexión configurada. Ejecuta `php artisan entorno:verificar`: muestra el ejecutable, el php.ini cargado y la extensión necesaria. `composer run diagnostico` comprueba también la conexión real sin cambiar datos.
+
+Para PostgreSQL en Windows, desde la carpeta del proyecto:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\configurar-postgresql.ps1
+```
+
+La herramienta habilita pdo_pgsql en el php.ini utilizado, hace una copia de respaldo y verifica que PHP lo cargue. No cambia .env, no descarga DLL ni elimina datos. Si tienes varios PHP instalados, indica el mismo ejecutable usado por el servidor:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\configurar-postgresql.ps1 -PhpPath 'C:\ruta\php.exe'
+```
+
+Si faltan php_pdo_pgsql.dll o libpq.dll, repara esa instalación con su distribución oficial, de la misma versión y arquitectura. Si PHP no puede cargar la extensión después del cambio, la herramienta restaura la configuración anterior. Si no tienes permisos para editar php.ini, necesitarás usar una terminal con permisos sobre ese archivo.
+
+Detén el servidor actual con Ctrl+C y vuelve a iniciarlo con ese mismo PHP. Después ejecuta `php artisan config:clear`, `composer run diagnostico` y `php artisan migrate --seed`. No uses migrate:fresh para solucionar este error en una base con datos.
 
 ### Reiniciar la demostración
 
@@ -150,7 +194,7 @@ npm audit
 
 Las pruebas usan SQLite en memoria por defecto y no borran la base local. Cubren autenticación, roles, CRUD, seeders repetibles, claves foráneas, historial, préstamos duplicados, devoluciones repetidas, reservas superpuestas, propiedad de solicitudes y expiración.
 
-GitHub Actions ejecuta la suite con SQLite y MySQL, además de formato y compilación del frontend. Los cambios se revisan mediante Pull Request antes de integrarse a main.
+GitHub Actions ejecuta la suite con SQLite, MySQL y PostgreSQL, además de formato y compilación del frontend. Los cambios se revisan mediante Pull Request antes de integrarse a main.
 
 Para la demostración, prueba ambos roles, intenta entrar como estudiante a /equipos/create, registra y devuelve un préstamo, revisa el historial y recorre solicitud → aprobación → entrega de reserva. Comprueba también errores de credenciales y campos obligatorios.
 

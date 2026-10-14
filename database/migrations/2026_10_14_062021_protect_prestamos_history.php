@@ -11,13 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('prestamos', function (Blueprint $table) {
+        $driver = Schema::getConnection()->getDriverName();
+
+        Schema::table('prestamos', function (Blueprint $table) use ($driver) {
             $table->dropForeign(['equipo_id']);
             $table->dropForeign(['estudiante_id']);
             $table->foreign('equipo_id')->references('id')->on('equipos')->restrictOnDelete();
             $table->foreign('estudiante_id')->references('id')->on('users')->restrictOnDelete();
-            $table->unsignedBigInteger('equipo_activo_id')->nullable()
-                ->virtualAs('CASE WHEN fecha_devolucion IS NULL THEN equipo_id ELSE NULL END');
+            $activo = $table->unsignedBigInteger('equipo_activo_id')->nullable();
+            $expresion = 'CASE WHEN fecha_devolucion IS NULL THEN equipo_id ELSE NULL END';
+
+            if ($driver === 'pgsql') {
+                $activo->storedAs($expresion);
+            } else {
+                $activo->virtualAs($expresion);
+            }
             $table->unique('equipo_activo_id');
             $table->index(['equipo_id', 'fecha_devolucion']);
             $table->index(['estudiante_id', 'fecha_prestamo']);
