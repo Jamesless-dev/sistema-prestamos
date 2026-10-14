@@ -200,13 +200,16 @@ OperacionEquipos concentra las reglas compartidas de préstamos y reservas. Los 
 
 ```bash
 php artisan test --compact
+php artisan test --compact --log-junit storage/logs/junit.xml
 php vendor/bin/pint --test
 npm run build
 composer audit
 npm audit
 ```
 
-Las pruebas usan SQLite en memoria por defecto y no borran la base local. Cubren autenticación, roles, CRUD, seeders repetibles, claves foráneas, historial, préstamos duplicados, devoluciones repetidas, reservas superpuestas, propiedad de solicitudes y expiración.
+Las pruebas usan SQLite en memoria por defecto y no borran la base local. Cubren autenticación, roles, CRUD, seeders repetibles, claves foráneas, historial, préstamos duplicados, devoluciones repetidas, reservas superpuestas, propiedad de solicitudes y expiración. También comprueban CSRF con su protección activada, búsqueda sin distinguir mayúsculas, horarios límite, cambios de permisos con un formulario abierto, reparación de la tabla reservas y reversión completa de operaciones cuando falla el guardado.
+
+El segundo comando permite guardar un informe JUnit para consultar los resultados de cada caso; no hace falta ejecutar ambos comandos para una comprobación normal. Las pruebas de fallo de guardado simulan errores dentro de una transacción y comprueban tanto el mensaje mostrado como la conservación de los datos.
 
 GitHub Actions ejecuta la suite con SQLite, MySQL y PostgreSQL, además de formato y compilación del frontend. Los cambios se revisan mediante Pull Request antes de integrarse a main.
 

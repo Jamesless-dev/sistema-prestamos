@@ -21,9 +21,9 @@ class ConsultaEquipos extends Component
 
         $this->equiposDisponibles = Equipo::where('estado', 'disponible')
             ->where(function ($query) {
-                $query->where('nombre', 'like', '%'.$this->busqueda.'%')
-                    ->orWhere('codigo', 'like', '%'.$this->busqueda.'%')
-                    ->orWhere('categoria', 'like', '%'.$this->busqueda.'%');
+                $query->whereLike('nombre', '%'.$this->busqueda.'%')
+                    ->orWhereLike('codigo', '%'.$this->busqueda.'%')
+                    ->orWhereLike('categoria', '%'.$this->busqueda.'%');
             })
             ->orderBy('categoria')
             ->get();

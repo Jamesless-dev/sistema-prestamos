@@ -7,6 +7,8 @@ use App\Models\Equipo;
 use App\Models\Reserva;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Exceptions;
 use Livewire\Livewire;
 use Livewire\Volt\Volt;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -147,5 +149,100 @@ class OperacionesTest extends TestCase
 
         $this->get(route('dashboard.encargado'))->assertRedirect(route('verification.notice'));
         Livewire::test(GestionPrestamos::class)->assertForbidden();
+    }
+
+    public function test_loan_requires_equipment_and_student_without_saving_partial_data(): void
+    {
+        $this->actingAs(User::factory()->create(['role' => 'encargado']));
+
+        Livewire::test(GestionPrestamos::class)->call('registrarPrestamo')
+            ->assertHasErrors(['equipo_id' => 'required', 'estudiante_id' => 'required'])
+            ->assertSee('Selecciona un equipo.')->assertSee('Selecciona un estudiante.');
+
+        $this->assertDatabaseCount('prestamos', 0);
+    }
+
+    public static function invalidLoanFields(): array
+    {
+        return [
+            'equipo no numérico' => ['equipo_id', 'abc', 'integer'],
+            'equipo inexistente' => ['equipo_id', 999999, 'exists'],
+            'estudiante no numérico' => ['estudiante_id', 'abc', 'integer'],
+            'estudiante inexistente' => ['estudiante_id', 999999, 'exists'],
+            'observaciones largas' => ['observaciones', str_repeat('x', 256), 'max'],
+            'observaciones no textuales' => ['observaciones', ['x'], 'string'],
+        ];
+    }
+
+    #[DataProvider('invalidLoanFields')]
+    public function test_invalid_loan_fields_do_not_change_availability(string $field, mixed $value, string $rule): void
+    {
+        $equipo = Equipo::factory()->create();
+        $student = User::factory()->create();
+        $this->actingAs(User::factory()->create(['role' => 'encargado']));
+
+        Livewire::test(GestionPrestamos::class)->set('equipo_id', $equipo->id)->set('estudiante_id', $student->id)
+            ->set($field, $value)->call('registrarPrestamo')->assertHasErrors([$field => $rule]);
+
+        $this->assertDatabaseCount('prestamos', 0);
+        $this->assertSame('disponible', $equipo->fresh()->estado);
+    }
+
+    public function test_approved_reservation_blocks_direct_loans_even_if_equipment_state_is_stale(): void
+    {
+        $this->freezeTime();
+        $equipo = Equipo::factory()->create();
+        $student = User::factory()->create();
+        $equipo->reservas()->create([
+            'estudiante_id' => $student->id, 'fecha_inicio' => now()->addDay(),
+            'fecha_fin' => now()->addDay()->addHour(), 'estado' => Reserva::APROBADA,
+        ]);
+        $this->actingAs(User::factory()->create(['role' => 'encargado']));
+
+        Livewire::test(GestionPrestamos::class)->set('equipo_id', $equipo->id)->set('estudiante_id', $student->id)
+            ->call('registrarPrestamo')->assertSet('mensajeError', 'El equipo ya no está disponible. Actualiza la selección.');
+
+        $this->assertDatabaseCount('prestamos', 0);
+        $this->assertDatabaseCount('reservas', 1);
+    }
+
+    public function test_failure_updating_equipment_rolls_back_the_loan_and_reports_a_safe_error(): void
+    {
+        $equipo = Equipo::factory()->create();
+        $student = User::factory()->create();
+        $this->actingAs(User::factory()->create(['role' => 'encargado']));
+        Exceptions::fake();
+        Event::listen('eloquent.updating: '.Equipo::class, function (Equipo $equipo): void {
+            if ($equipo->estado === Equipo::PRESTADO) {
+                throw new \RuntimeException('Fallo simulado al guardar el equipo.');
+            }
+        });
+
+        Livewire::test(GestionPrestamos::class)->set('equipo_id', $equipo->id)->set('estudiante_id', $student->id)
+            ->call('registrarPrestamo')
+            ->assertSet('mensajeError', 'No se pudo registrar el préstamo. Actualiza la página e inténtalo de nuevo.')
+            ->assertDontSee('Fallo simulado');
+
+        Exceptions::assertReported(\RuntimeException::class);
+        $this->assertDatabaseCount('prestamos', 0);
+        $this->assertSame('disponible', $equipo->fresh()->estado);
+    }
+
+    public function test_failure_updating_equipment_rolls_back_the_return(): void
+    {
+        $equipo = Equipo::factory()->create(['estado' => 'prestado']);
+        $loan = $equipo->prestamos()->create(['estudiante_id' => User::factory()->create()->id]);
+        $this->actingAs(User::factory()->create(['role' => 'encargado']));
+        Exceptions::fake();
+        Event::listen('eloquent.updating: '.Equipo::class, function (): void {
+            throw new \RuntimeException('Fallo simulado al guardar la devolución.');
+        });
+
+        Livewire::test(GestionPrestamos::class)->call('registrarDevolucion', $loan->id)
+            ->assertSet('mensajeError', 'No se pudo registrar la devolución. Actualiza la página e inténtalo de nuevo.');
+
+        Exceptions::assertReported(\RuntimeException::class);
+        $this->assertNull($loan->fresh()->fecha_devolucion);
+        $this->assertSame('prestado', $equipo->fresh()->estado);
     }
 }
