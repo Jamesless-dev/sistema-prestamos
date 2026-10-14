@@ -27,12 +27,20 @@ Route::middleware(['auth', 'verified', 'role:encargado'])->group(function () {
     Route::get('/dashboard/encargado', function () {
         return view('dashboard.encargado');
     })->name('dashboard.encargado');
+
+        Route::get('/reservas/gestion', function () {
+        return view('reservas.gestion');
+    })->name('reservas.gestion');
 });
 
 Route::middleware(['auth', 'verified', 'role:estudiante'])->group(function () {
     Route::get('/dashboard/estudiante', function () {
         return view('dashboard.estudiante');
     })->name('dashboard.estudiante');
+
+        Route::get('/reservas', function () {
+        return view('reservas.estudiante');
+    })->name('reservas.estudiante');
 });
 
 

@@ -13,7 +13,9 @@ class Equipo extends Model
 
     public const PRESTADO = 'prestado';
 
-    public const ESTADOS = [self::DISPONIBLE, self::PRESTADO];
+    public const RESERVADO = 'reservado';
+
+    public const ESTADOS = [self::DISPONIBLE, self::PRESTADO, self::RESERVADO];
 
     protected $fillable = [
         'codigo',
@@ -25,6 +27,19 @@ class Equipo extends Model
     public function prestamos()
     {
         return $this->hasMany(Prestamo::class);
+    }
+
+    public function reservas()
+    {
+        return $this->hasMany(Reserva::class);
+    }
+
+    public function sincronizarEstadoReserva(): void
+    {
+        if ($this->estado === self::RESERVADO
+            && ! $this->reservas()->where('estado', Reserva::APROBADA)->exists()) {
+            $this->update(['estado' => self::DISPONIBLE]);
+        }
     }
 
     public function estaDisponible()
