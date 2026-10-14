@@ -38,7 +38,7 @@ class EquipoRequest extends FormRequest
             'string' => 'El campo :attribute debe ser texto.',
             'max' => 'El campo :attribute no puede superar los :max caracteres.',
             'codigo.unique' => 'Este código ya está registrado.',
-            'estado.in' => 'El estado debe ser Disponible o Prestado.',
+            'estado.in' => 'El estado debe ser Disponible, Prestado o Reservado.',
         ];
     }
 

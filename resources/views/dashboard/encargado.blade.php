@@ -13,6 +13,7 @@
                     <p class="mb-6">Tu rol: <span class="font-bold text-blue-600">{{ ucfirst(auth()->user()->role) }}</span></p>
                     
                     <a href="{{ route('equipos.index') }}" class="inline-flex items-center px-4 py-2 mb-6 bg-gray-800 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700">Equipos</a>
+                    <a href="{{ route('reservas.gestion') }}" class="inline-flex items-center px-4 py-2 mb-6 bg-blue-600 rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-500">Reservas</a>
 
                     @livewire('gestion-prestamos')
                 </div>
