@@ -1,58 +1,82 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistema de Préstamos
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Este sistema es una aplicación web desarrollada íntegramente en Laravel que permite gestionar el control y préstamo de equipos de manera segura y organizada. Su objetivo principal es optimizar la administración de inventario tecnológico o institucional, estableciendo un flujo claro de control entre encargados y usuarios comunes mediante una interfaz basada en roles.
 
-## About Laravel
+Repositorio oficial: [https://github.com/Jamesless-dev/sistema-prestamos.git](https://github.com/Jamesless-dev/sistema-prestamos.git)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Requisitos Previos
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Antes de comenzar, asegúrate de tener instalados en tu sistema:
+- **PHP** >= 8.3
+- **Composer**
+- **Node.js** y **NPM**
+- **PostgreSQL** (asegúrate de tener el servicio corriendo)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Instalación Paso a Paso
 
-## Learning Laravel
+1. **Clona el repositorio:**
+   ```bash
+   git clone https://github.com/Jamesless-dev/sistema-prestamos.git
+   cd sistema-prestamos
+   ```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+2. **Crea la base de datos:**
+   Abre tu gestor de PostgreSQL y crea una base de datos llamada `prestamos_laboratorio`.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+3. **Configura el archivo de entorno:**
+   Copia el archivo de ejemplo:
+   ```bash
+   cp .env.example .env
+   ```
+   Abre el archivo `.env` y ajusta las credenciales de tu base de datos:
+   ```env
+   DB_CONNECTION=pgsql
+   DB_HOST=127.0.0.1
+   DB_PORT=5432
+   DB_DATABASE=prestamos_laboratorio
+   DB_USERNAME=postgres
+   DB_PASSWORD=tu_contraseña_de_postgres
+   ```
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+4. **Ejecuta la instalación automática:**
+   El proyecto incluye un script configurado en `composer.json` que instala dependencias, genera la clave de la aplicación, ejecuta las migraciones y compila los assets:
+   ```bash
+   composer run setup
+   ```
 
-## Agentic Development
+5. **Puebla la base de datos con datos de prueba:**
+   Este comando creará 1 encargado, 2 estudiantes y 8 equipos listos para usar:
+   ```bash
+   php artisan db:seed
+   ```
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+6. **Inicia el entorno de desarrollo:**
+   Abre una terminal y ejecuta el compilador de assets en modo desarrollo (para recarga en vivo):
+   ```bash
+   npm run dev
+   ```
+   *(Deja esta terminal corriendo en segundo plano).*
 
-```bash
-composer require laravel/boost --dev
+   Abre una **segunda terminal** e inicia el servidor de Laravel:
+   ```bash
+   php artisan serve
+   ```
 
-php artisan boost:install
-```
+7. **Accede a la aplicación:**
+   Abre tu navegador y ve a: [http://localhost:8000](http://localhost:8000)
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## Credenciales de Prueba
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+El sistema incluye usuarios preconfigurados gracias a los seeders. Puedes usar estas credenciales para probar los diferentes roles y flujos:
 
-## Code of Conduct
+| Rol | Correo Electrónico | Contraseña |
+| :--- | :--- | :--- |
+| **Encargado** | `encargado@tecsup.edu.pe` | `Admin123` |
+| **Estudiante 1** | `juan@gmail.com` | `facil` |
+| **Estudiante 2** | `maria@gmail.com` | `facil` |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+> 💡 **Nota importante para pruebas:** Los navegadores comparten la misma sesión en todas sus pestañas. Si necesitas probar el flujo completo (ej: un estudiante solicita y el encargado aprueba), usa **dos navegadores diferentes** (ej. Chrome y Firefox) o una **ventana de incógnito** para iniciar sesión con ambos roles al mismo tiempo, evitando conflictos de sesión.
 
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
