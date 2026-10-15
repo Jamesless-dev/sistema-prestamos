@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             EncargadoSeeder::class,
             TestUserSeeder::class,
+            EquipoSeeder::class,
         ]);
     }
 }

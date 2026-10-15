@@ -16,5 +16,12 @@ class TestUserSeeder extends Seeder
             'password' => Hash::make('facil'),
             'role' => 'estudiante',
         ]);
+
+        User::create([
+            'name' => 'Maria Lopez',
+            'email' => 'maria@gmail.com',
+            'password' => Hash::make('craken3214'),
+            'role' => 'estudiante',
+        ]);
     }
 }
