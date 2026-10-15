@@ -6,17 +6,25 @@ use App\Models\Equipo;
 use App\Models\Reserva;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class ReservarEquipo extends Component
 {
     public $equipo_id = '';
+
     public $fecha = '';
+
     public $hora_inicio = '';
+
     public $hora_fin = '';
+
     public $observaciones = '';
+
     public $mes = '';
+
     public $mensajeExito = '';
+
     public $mensajeError = '';
 
     public function mount()
@@ -36,7 +44,7 @@ class ReservarEquipo extends Component
             $this->mes = now()->format('Y-m');
         }
 
-        return Carbon::parse($this->mes . '-01')->startOfDay();
+        return Carbon::parse($this->mes.'-01')->startOfDay();
     }
 
     public function updatedEquipoId()
@@ -95,16 +103,18 @@ class ReservarEquipo extends Component
             'hora_fin' => 'hora de fin',
         ]);
 
-        $inicio = Carbon::createFromFormat('Y-m-d H:i', $this->fecha . ' ' . $this->hora_inicio);
-        $fin = Carbon::createFromFormat('Y-m-d H:i', $this->fecha . ' ' . $this->hora_fin);
+        $inicio = Carbon::createFromFormat('Y-m-d H:i', $this->fecha.' '.$this->hora_inicio);
+        $fin = Carbon::createFromFormat('Y-m-d H:i', $this->fecha.' '.$this->hora_fin);
 
         if ($inicio->lte(now())) {
             $this->addError('hora_inicio', 'La reserva debe ser para una fecha y hora futuras.');
+
             return;
         }
 
         if (Reserva::hayConflicto($this->equipo_id, $inicio, $fin)) {
             $this->mensajeError = 'Ese equipo ya está reservado en ese horario. Elige otro horario u otro día.';
+
             return;
         }
 
@@ -125,13 +135,15 @@ class ReservarEquipo extends Component
     {
         $this->autorizar();
 
-        $reserva = Reserva::with('equipo')
-            ->where('estudiante_id', auth()->id())
-            ->whereIn('estado', [Reserva::PENDIENTE, Reserva::APROBADA])
-            ->findOrFail($reservaId);
-
-        $reserva->update(['estado' => Reserva::CANCELADA]);
-        $reserva->equipo->sincronizarEstadoReserva();
+        DB::transaction(function () use ($reservaId): void {
+            $query = Reserva::where('estudiante_id', auth()->id())
+                ->whereIn('estado', [Reserva::PENDIENTE, Reserva::APROBADA]);
+            $equipoId = (clone $query)->findOrFail($reservaId)->equipo_id;
+            $equipo = Equipo::lockForUpdate()->findOrFail($equipoId);
+            $reserva = $query->lockForUpdate()->findOrFail($reservaId);
+            $reserva->update(['estado' => Reserva::CANCELADA]);
+            $equipo->sincronizarEstadoReserva();
+        });
 
         $this->mensajeError = '';
         $this->mensajeExito = 'Reserva cancelada.';
