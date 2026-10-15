@@ -42,8 +42,8 @@ class EquipoController extends Controller
 
     public function destroy(Equipo $equipo): RedirectResponse
     {
-        if ($equipo->prestamos()->exists()) {
-            return to_route('equipos.index')->with('error', 'No se puede eliminar un equipo con historial de préstamos.');
+        if ($equipo->prestamos()->exists() || $equipo->reservas()->exists()) {
+            return to_route('equipos.index')->with('error', 'No se puede eliminar un equipo con préstamos o reservas registrados.');
         }
 
         $equipo->delete();

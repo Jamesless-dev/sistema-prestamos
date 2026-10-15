@@ -4,6 +4,8 @@ use App\Models\User;
 
 return [
 
+    'verify_email' => env('AUTH_VERIFY_EMAIL', env('APP_ENV') === 'production'),
+
     /*
     |--------------------------------------------------------------------------
     | Authentication Defaults

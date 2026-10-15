@@ -3,8 +3,10 @@
 namespace App\Http\Requests;
 
 use App\Models\Equipo;
+use App\Models\Reserva;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class EquipoRequest extends FormRequest
 {
@@ -28,6 +30,26 @@ class EquipoRequest extends FormRequest
             'categoria' => ['required', 'string', 'max:255'],
             'estado' => ['required', Rule::in(Equipo::ESTADOS)],
         ];
+    }
+
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $equipo = $this->route('equipo');
+
+            if (! $equipo instanceof Equipo || $validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $prestado = $equipo->prestamos()->whereNull('fecha_devolucion')->exists();
+            $reservado = $equipo->reservas()->where('estado', Reserva::APROBADA)->where('fecha_fin', '>', now())->exists();
+
+            if ($prestado && $this->input('estado') !== Equipo::PRESTADO) {
+                $validator->errors()->add('estado', 'Registra la devolución antes de cambiar el estado de un equipo prestado.');
+            } elseif (! $prestado && $reservado && $this->input('estado') !== Equipo::RESERVADO) {
+                $validator->errors()->add('estado', 'El equipo tiene una reserva aprobada. Gestiona la reserva antes de cambiar su estado.');
+            }
+        }];
     }
 
     /** @return array<string, string> */
