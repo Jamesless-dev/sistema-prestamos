@@ -75,8 +75,8 @@ El sistema incluye usuarios preconfigurados gracias a los seeders. Puedes usar e
 | :--- | :--- | :--- |
 | **Encargado** | `encargado@tecsup.edu.pe` | `Admin123` |
 | **Estudiante 1** | `juan@gmail.com` | `facil` |
-| **Estudiante 2** | `maria@gmail.com` | `facil` |
+| **Estudiante 2** | `maria@gmail.com` | `craken3214` |
 
-> 💡 **Nota importante para pruebas:** Los navegadores comparten la misma sesión en todas sus pestañas. Si necesitas probar el flujo completo (ej: un estudiante solicita y el encargado aprueba), usa **dos navegadores diferentes** (ej. Chrome y Firefox) o una **ventana de incógnito** para iniciar sesión con ambos roles al mismo tiempo, evitando conflictos de sesión.
+> **Nota importante para pruebas:** Los navegadores comparten la misma sesión en todas sus pestañas. Si necesitas probar el flujo completo (ej: un estudiante solicita y el encargado aprueba), usa **dos navegadores diferentes** (ej. Chrome y Firefox) o una **ventana de incógnito** para iniciar sesión con ambos roles al mismo tiempo, evitando conflictos de sesión.
 
 ---
