@@ -11,8 +11,10 @@ use Livewire\Component;
 
 class GestionReservas extends Component
 {
-    public $tab = 'pendientes'; // ← AGREGAR ESTA LÍNEA
+    public $tab = 'pendientes';
+
     public $mensajeExito = '';
+
     public $mensajeError = '';
 
     public function mount()
@@ -37,7 +39,9 @@ class GestionReservas extends Component
 
         try {
             DB::transaction(function () use ($reservaId) {
-                $reserva = Reserva::with('equipo')->lockForUpdate()->findOrFail($reservaId);
+                $equipoId = Reserva::findOrFail($reservaId)->equipo_id;
+                $equipo = Equipo::lockForUpdate()->findOrFail($equipoId);
+                $reserva = Reserva::lockForUpdate()->findOrFail($reservaId);
 
                 if ($reserva->estado !== Reserva::PENDIENTE) {
                     throw new \DomainException('Esta reserva ya fue procesada.');
@@ -53,9 +57,7 @@ class GestionReservas extends Component
 
                 $reserva->update(['estado' => Reserva::APROBADA]);
 
-                if ($reserva->equipo->estado === Equipo::DISPONIBLE) {
-                    $reserva->equipo->update(['estado' => Equipo::RESERVADO]);
-                }
+                $equipo->sincronizarEstadoReserva();
             });
 
             $this->avisar('Reserva aprobada. El equipo quedó marcado como Reservado.');
@@ -80,9 +82,13 @@ class GestionReservas extends Component
     {
         $this->autorizar();
 
-        $reserva = Reserva::with('equipo')->where('estado', Reserva::APROBADA)->findOrFail($reservaId);
-        $reserva->update(['estado' => Reserva::CANCELADA]);
-        $reserva->equipo->sincronizarEstadoReserva();
+        DB::transaction(function () use ($reservaId): void {
+            $equipoId = Reserva::where('estado', Reserva::APROBADA)->findOrFail($reservaId)->equipo_id;
+            $equipo = Equipo::lockForUpdate()->findOrFail($equipoId);
+            $reserva = Reserva::where('estado', Reserva::APROBADA)->lockForUpdate()->findOrFail($reservaId);
+            $reserva->update(['estado' => Reserva::CANCELADA]);
+            $equipo->sincronizarEstadoReserva();
+        });
 
         $this->avisar('Reserva cancelada y equipo liberado.');
     }
@@ -93,23 +99,33 @@ class GestionReservas extends Component
 
         try {
             DB::transaction(function () use ($reservaId) {
-                $reserva = Reserva::with('equipo')->lockForUpdate()->findOrFail($reservaId);
+                $equipoId = Reserva::findOrFail($reservaId)->equipo_id;
+                $equipo = Equipo::lockForUpdate()->findOrFail($equipoId);
+                $reserva = Reserva::lockForUpdate()->findOrFail($reservaId);
 
                 if ($reserva->estado !== Reserva::APROBADA) {
                     throw new \DomainException('Solo se pueden entregar reservas aprobadas.');
                 }
 
-                if ($reserva->equipo->estado === Equipo::PRESTADO) {
+                if ($equipo->estado === Equipo::PRESTADO || $equipo->prestamos()->whereNull('fecha_devolucion')->exists()) {
                     throw new \DomainException('El equipo todavía está prestado a otra persona.');
+                }
+
+                if ($reserva->fecha_fin->lte(now())) {
+                    throw new \DomainException('No se puede entregar: el horario de la reserva ya pasó.');
+                }
+
+                if ($reserva->fecha_inicio->gt(now())) {
+                    throw new \DomainException('La entrega estará disponible cuando empiece el horario reservado.');
                 }
 
                 Prestamo::create([
                     'equipo_id' => $reserva->equipo_id,
                     'estudiante_id' => $reserva->estudiante_id,
-                    'observaciones' => 'Entrega de la reserva #' . $reserva->id,
+                    'observaciones' => 'Entrega de la reserva #'.$reserva->id,
                 ]);
 
-                $reserva->equipo->update(['estado' => Equipo::PRESTADO]);
+                $equipo->update(['estado' => Equipo::PRESTADO]);
                 $reserva->update(['estado' => Reserva::FINALIZADA]);
             });
 
