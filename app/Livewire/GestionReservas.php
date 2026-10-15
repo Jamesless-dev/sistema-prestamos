@@ -11,6 +11,7 @@ use Livewire\Component;
 
 class GestionReservas extends Component
 {
+    public $tab = 'pendientes'; // ← AGREGAR ESTA LÍNEA
     public $mensajeExito = '';
     public $mensajeError = '';
 
